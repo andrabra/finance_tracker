@@ -1,22 +1,44 @@
-# main.py
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import os
+import json
 from dotenv import load_dotenv
 import database
 
-# Загружаем переменные окружения
+# Загружаем переменные окружения из .env (только локально)
 load_dotenv()
 
 app = FastAPI(title="Multi-User Expense Tracker API")
 
-# Конфигурация из .env
-SERVICE_ACCOUNT_FILE = 'service_account.json'
-API_HOST = os.getenv('API_HOST', '0.0.0.0')
-API_PORT = int(os.getenv('API_PORT', '8000'))
+# Конфигурация API
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
+
+# Конфигурация Google API
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+creds = None
+creds_json = os.getenv("GOOGLE_CREDENTIALS")
+
+if creds_json:
+    # ✅ Читаем ключи из переменной окружения (Render)
+    try:
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        print("🔑 Используются ключи Google API из переменной окружения")
+    except Exception as e:
+        print(f"❌ Ошибка загрузки GOOGLE_CREDENTIALS: {e}")
+else:
+    # ✅ Фолбэк: локальный файл
+    service_account_file = "service_account.json"
+    if os.path.exists(service_account_file):
+        creds = Credentials.from_service_account_file(service_account_file, scopes=SCOPES)
+        print("📂 Используется локальный service_account.json")
+    else:
+        print("⚠️ Не найдены креды Google API (ни GOOGLE_CREDENTIALS, ни service_account.json)")
 
 # Модель данных для траты
 class Expense(BaseModel):
@@ -32,16 +54,13 @@ class UserCreate(BaseModel):
     api_key: str
 
 def get_google_sheet(spreadsheet_id):
+    if not creds:
+        print("❌ Нет учётных данных Google API")
+        return None
     try:
-        scopes = ['https://www.googleapis.com/auth/spreadsheets']
-        creds = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, 
-            scopes=scopes
-        )
         gc = gspread.authorize(creds)
         spreadsheet = gc.open_by_key(spreadsheet_id)
-        sheet = spreadsheet.sheet1
-        return sheet
+        return spreadsheet.sheet1
     except Exception as e:
         print(f"❌ Ошибка подключения к таблице {spreadsheet_id}: {e}")
         return None
@@ -65,8 +84,6 @@ async def add_expense(
             expense.amount,
             expense.category,
             expense.description,
-            # "API",
-            # user["name"]
         ]
         
         print(f"📝 {user['name']} добавляет запись: {new_row}")

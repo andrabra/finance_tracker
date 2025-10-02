@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: finance-tracker-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    envVars:
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 10000   # Render сам выставляет PORT, можно не хардкодить
+      - key: DEBUG
+        value: False
+
+  - type: worker
+    name: finance-tracker-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    plan: free
+    envVars:
+      - key: API_URL
+        value: https://finance-tracker-api.onrender.com/api/expense
