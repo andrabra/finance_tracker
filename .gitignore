@@ -28,6 +28,8 @@ venv/
 env/
 ENV/
 .env
+.env.local
+.env.render
 .venv
 env.bak/
 venv.bak/
