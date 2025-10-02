@@ -11,7 +11,7 @@ load_dotenv()
 
 # Конфигурация из .env
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-API_URL = os.getenv('API_URL', 'http://localhost:8000/api/expense')
+API_URL = os.getenv("API_URL", "http://localhost:8000/api/expense")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
